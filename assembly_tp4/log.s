@@ -10,63 +10,45 @@
 .equ MODE_0644,  0x1A4
 
 .section .data
-log_path: .asciz "log.txt"
+log_path: .asciz "spi_log.txt"
 newline:  .ascii "\n"
 
-msg_vel_inc: .ascii "Vel. max aumentada para "
+msg_vel_inc:    .ascii "Vel. max aumentada para "
 msg_vel_inc_len: .quad . - msg_vel_inc
-msg_vel_dec: .ascii "Vel. max reduzida para "
+msg_vel_dec:    .ascii "Vel. max reduzida para "
 msg_vel_dec_len: .quad . - msg_vel_dec
-msg_vel_unit: .ascii " km/h"
+msg_vel_unit:   .ascii " km/h"
 msg_vel_unit_len: .quad . - msg_vel_unit
 
-msg_risk_inc: .ascii "Zona de risco aumentada: livre="
+msg_risk_inc:   .ascii "Zona de risco aumentada: livre="
 msg_risk_inc_len: .quad . - msg_risk_inc
-msg_risk_dec: .ascii "Zona de risco reduzida: livre="
+msg_risk_dec:   .ascii "Zona de risco reduzida: livre="
 msg_risk_dec_len: .quad . - msg_risk_dec
-msg_mid_att: .ascii " m atencao="
+msg_mid_att:    .ascii " m atencao="
 msg_mid_att_len: .quad . - msg_mid_att
-msg_mid_unit: .ascii " m"
+msg_mid_unit:   .ascii " m"
 msg_mid_unit_len: .quad . - msg_mid_unit
 
-msg_tang_speed: .ascii "Vel. Tang: "
-msg_tang_speed_len: .quad . - msg_tang_speed
-msg_dist_e: .ascii " km/h | E="
-msg_dist_e_len: .quad . - msg_dist_e
-msg_dist_c: .ascii " C="
-msg_dist_c_len: .quad . - msg_dist_c
-msg_dist_d: .ascii " D="
-msg_dist_d_len: .quad . - msg_dist_d
-msg_dir: .ascii " cm | dir="
-msg_dir_len: .quad . - msg_dir
-
-msg_dir_frente: .ascii "frente"
-msg_dir_frente_len: .quad . - msg_dir_frente
-msg_dir_esq: .ascii "esquerda"
-msg_dir_esq_len: .quad . - msg_dir_esq
-msg_dir_dir: .ascii "direita"
-msg_dir_dir_len: .quad . - msg_dir_dir
-msg_dir_blk: .ascii "tras"
-msg_dir_blk_len: .quad . - msg_dir_blk
-
-.equ STX,        0x02
-.equ ETX,        0x03
-.equ TYPE_SPEED, 0x20
-.equ SPEED_LEN,  8
+msg_tel_vel:    .ascii "Tel vel="
+msg_tel_vel_len: .quad . - msg_tel_vel
+msg_tel_e:      .ascii " e="
+msg_tel_e_len:  .quad . - msg_tel_e
+msg_tel_c:      .ascii " c="
+msg_tel_c_len:  .quad . - msg_tel_c
+msg_tel_d:      .ascii " d="
+msg_tel_d_len:  .quad . - msg_tel_d
+msg_tel_dir:    .ascii " dir="
+msg_tel_dir_len: .quad . - msg_tel_dir
 
 .extern cfg_dist_free
 .extern cfg_dist_att
 .extern cfg_vel_max
-.extern spi_read_buf
 
 .section .bss
 .align 8
-log_fd: .skip 8
+log_fd:       .skip 8
 log_byte_buf: .skip 8
 log_line_buf: .skip 80
-.global speed_pkt
-speed_pkt: .skip 8
-last_tel: .skip 5
 
 .section .text
 
@@ -86,14 +68,6 @@ log_init:
 
     ldr x1, =log_fd
     str x0, [x1]
-
-    ldr x1, =last_tel
-    mov w2, #0xFF
-    strb w2, [x1]
-    strb w2, [x1, #1]
-    strb w2, [x1, #2]
-    strb w2, [x1, #3]
-    strb w2, [x1, #4]
 
     ldp x29, x30, [sp], #16
     ret
@@ -186,16 +160,6 @@ log_format_byte_ones:
 
 .section .rodata
 .align 3
-log_dir_table:
-    .quad msg_dir_frente
-    .quad msg_dir_frente_len
-    .quad msg_dir_esq
-    .quad msg_dir_esq_len
-    .quad msg_dir_dir
-    .quad msg_dir_dir_len
-    .quad msg_dir_blk
-    .quad msg_dir_blk_len
-
 log_action_table:
     .quad log_action_vel_inc    // 1
     .quad log_action_vel_dec    // 2
@@ -284,128 +248,62 @@ log_action_done:
     ldp     x29, x30, [sp], #32
     ret
 
-// void log_speed_poll(void) — le STX|0x20|speed|E|C|D|dir|ETX e grava se mudou
-.global log_speed_poll
-log_speed_poll:
-    stp     x29, x30, [sp, #-64]!
+// void log_telemetry(const uint8_t *pkt) — x0 aponta para os 8 bytes
+//   STX | TYPE | speed | dist_e | dist_c | dist_d | dir | ETX
+.global log_telemetry
+log_telemetry:
+    stp     x29, x30, [sp, #-32]!
     stp     x19, x20, [sp, #16]
-    stp     x21, x22, [sp, #32]
-    stp     x23, x24, [sp, #48]
 
-    ldr     x0, =speed_pkt
-    str     xzr, [x0]
-    mov     x1, #SPEED_LEN
-    bl      spi_read_buf
+    mov     x19, x0
+    adr     x20, log_line_buf
+    mov     x1, x20
 
-    ldr     x9, =speed_pkt
-    ldrb    w0, [x9]
-    cmp     w0, #STX
-    b.ne    log_speed_done
-    ldrb    w0, [x9, #1]
-    cmp     w0, #TYPE_SPEED
-    b.ne    log_speed_done
-    ldrb    w0, [x9, #7]
-    cmp     w0, #ETX
-    b.ne    log_speed_done
-
-    ldrb    w19, [x9, #2]
-    ldrb    w20, [x9, #3]
-    ldrb    w21, [x9, #4]
-    ldrb    w22, [x9, #5]
-    ldrb    w23, [x9, #6]
-    and     w23, w23, #0x03
-
-    ldr     x0, =last_tel
-    ldrb    w1, [x0]
-    cmp     w19, w1
-    b.ne    log_speed_changed
-    ldrb    w1, [x0, #1]
-    cmp     w20, w1
-    b.ne    log_speed_changed
-    ldrb    w1, [x0, #2]
-    cmp     w21, w1
-    b.ne    log_speed_changed
-    ldrb    w1, [x0, #3]
-    cmp     w22, w1
-    b.ne    log_speed_changed
-    ldrb    w1, [x0, #4]
-    cmp     w23, w1
-    beq     log_speed_ok
-
-log_speed_changed:
-    ldr     x0, =last_tel
-    strb    w19, [x0]
-    strb    w20, [x0, #1]
-    strb    w21, [x0, #2]
-    strb    w22, [x0, #3]
-    strb    w23, [x0, #4]
-
-    adr     x24, log_line_buf
-    mov     x1, x24
-
-    ldr     x2, =msg_tang_speed
-    ldr     x3, =msg_tang_speed_len
+    ldr     x2, =msg_tel_vel
+    ldr     x3, =msg_tel_vel_len
+    ldr     w3, [x3]
+    bl      log_copy_n
+    ldrb    w0, [x19, #2]
+    bl      log_format_byte
+    ldr     x2, =msg_vel_unit
+    ldr     x3, =msg_vel_unit_len
     ldr     w3, [x3]
     bl      log_copy_n
 
-    mov     w0, w19
+    ldr     x2, =msg_tel_e
+    ldr     x3, =msg_tel_e_len
+    ldr     w3, [x3]
+    bl      log_copy_n
+    ldrb    w0, [x19, #3]
     bl      log_format_byte
 
-    ldr     x2, =msg_dist_e
-    ldr     x3, =msg_dist_e_len
+    ldr     x2, =msg_tel_c
+    ldr     x3, =msg_tel_c_len
     ldr     w3, [x3]
     bl      log_copy_n
-
-    mov     w0, w20
+    ldrb    w0, [x19, #4]
     bl      log_format_byte
 
-    ldr     x2, =msg_dist_c
-    ldr     x3, =msg_dist_c_len
+    ldr     x2, =msg_tel_d
+    ldr     x3, =msg_tel_d_len
     ldr     w3, [x3]
     bl      log_copy_n
-
-    mov     w0, w21
+    ldrb    w0, [x19, #5]
     bl      log_format_byte
 
-    ldr     x2, =msg_dist_d
-    ldr     x3, =msg_dist_d_len
+    ldr     x2, =msg_tel_dir
+    ldr     x3, =msg_tel_dir_len
     ldr     w3, [x3]
     bl      log_copy_n
-
-    mov     w0, w22
+    ldrb    w0, [x19, #6]
     bl      log_format_byte
 
-    ldr     x2, =msg_dir
-    ldr     x3, =msg_dir_len
-    ldr     w3, [x3]
-    bl      log_copy_n
-
-    ldr     x3, =log_dir_table
-    lsl     w0, w23, #4
-    add     x3, x3, x0
-    ldr     x2, [x3]
-    ldr     x3, [x3, #8]
-    ldr     w3, [x3]
-    bl      log_copy_n
-
-    sub     x1, x1, x24
-    mov     x0, x24
+    sub     x1, x1, x20
+    mov     x0, x20
     bl      log_write
 
-log_speed_ok:
-    mov     w0, #0
-    ldp     x23, x24, [sp, #48]
-    ldp     x21, x22, [sp, #32]
     ldp     x19, x20, [sp, #16]
-    ldp     x29, x30, [sp], #64
-    ret
-
-log_speed_done:
-    mov     w0, #-1
-    ldp     x23, x24, [sp, #48]
-    ldp     x21, x22, [sp, #32]
-    ldp     x19, x20, [sp, #16]
-    ldp     x29, x30, [sp], #64
+    ldp     x29, x30, [sp], #32
     ret
 
 // void log_close(void)

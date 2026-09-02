@@ -50,7 +50,7 @@ main_loop:
     bl ui_show_config
 
 no_key:
-    bl log_speed_poll
+    bl telemetry_poll
     mov w19, w0
     bl ui_show_spi_rx
     cmp w19, #0
@@ -76,6 +76,7 @@ quit:
     bl keyboard_restore
     bl ui_restore
     bl log_close
+    bl spi_close
     mov x0, #0
     mov x8, #SYS_EXIT
     svc #0

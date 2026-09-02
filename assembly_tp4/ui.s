@@ -54,7 +54,7 @@ config_buf:     .space 64
 .extern cfg_dist_free
 .extern cfg_dist_att
 .extern cfg_vel_max
-.extern speed_pkt
+.extern tel_pkt
 
 .section .text
 
@@ -285,7 +285,7 @@ ui_show_spi_rx:
     mov     x8, #SYS_WRITE
     svc     #0
 
-    ldr     x9, =speed_pkt
+    ldr     x9, =tel_pkt
     ldr     x10, =hex_digits
     mov     w11, #0
     sub     sp, sp, #16
