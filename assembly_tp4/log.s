@@ -250,12 +250,34 @@ log_action_done:
 
 // void log_telemetry(const uint8_t *pkt) — x0 aponta para os 8 bytes
 //   STX | TYPE | speed | dist_e | dist_c | dist_d | dir | ETX
+// So grava se alguma distancia (>0) estiver abaixo de cfg_dist_free.
 .global log_telemetry
 log_telemetry:
     stp     x29, x30, [sp, #-32]!
     stp     x19, x20, [sp, #16]
 
     mov     x19, x0
+    adr     x9, cfg_dist_free
+    ldrb    w12, [x9]
+
+    ldrb    w0, [x19, #3]
+    cbz     w0, log_tel_chk_c
+    cmp     w0, w12
+    b.lo    log_tel_emit
+
+log_tel_chk_c:
+    ldrb    w0, [x19, #4]
+    cbz     w0, log_tel_chk_d
+    cmp     w0, w12
+    b.lo    log_tel_emit
+
+log_tel_chk_d:
+    ldrb    w0, [x19, #5]
+    cbz     w0, log_tel_skip
+    cmp     w0, w12
+    b.hs    log_tel_skip
+
+log_tel_emit:
     adr     x20, log_line_buf
     mov     x1, x20
 
@@ -302,6 +324,7 @@ log_telemetry:
     mov     x0, x20
     bl      log_write
 
+log_tel_skip:
     ldp     x19, x20, [sp, #16]
     ldp     x29, x30, [sp], #32
     ret
