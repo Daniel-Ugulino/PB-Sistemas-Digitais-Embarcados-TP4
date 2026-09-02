@@ -1,10 +1,12 @@
 // Top: FSM dos 3 sensores + distancia/velocidade por canal (E, C, D)
 
-module road_sensores #(
-    parameter CLK_HZ     = 27_000_000,
-    parameter GAP_MS     = 60,
-    parameter TRIG_US    = 10,
-    parameter TIMEOUT_MS = 30
+module road_sensors #(
+    parameter CLK_HZ      = 27_000_000,
+    parameter GAP_MS      = 60,
+    parameter TRIG_US     = 20,
+    parameter BLIND_US    = 300,
+    parameter WARMUP_MS   = 50,
+    parameter TIMEOUT_MS  = 30
 ) (
     input  wire       clk,
     input  wire       rst,
@@ -22,6 +24,7 @@ module road_sensores #(
     output wire       valid_c,
     output wire       valid_d,
     output wire       ciclo_pronto,
+    output wire       timeout_e,
     output wire [3:0] estado_fsm,
     output wire [7:0] dist_atual_e,
     output wire [7:0] dist_atual_c,
@@ -39,6 +42,8 @@ module road_sensores #(
         .CLK_HZ(CLK_HZ),
         .GAP_MS(GAP_MS),
         .TRIG_US(TRIG_US),
+        .BLIND_US(BLIND_US),
+        .WARMUP_MS(WARMUP_MS),
         .TIMEOUT_MS(TIMEOUT_MS)
     ) fsm (
         .clk          (clk),
@@ -57,6 +62,7 @@ module road_sensores #(
         .valid_c      (valid_c_p),
         .valid_d      (valid_d_p),
         .ciclo_pronto (ciclo_pronto),
+        .timeout_e    (timeout_e),
         .estado_fsm   (estado_fsm)
     );
 

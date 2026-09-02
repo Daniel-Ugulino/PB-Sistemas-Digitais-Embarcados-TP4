@@ -1,155 +1,156 @@
 module arrow_display (
     input  wire       clk,
     input  wire       rst_n,
+    input  wire       enable,       // 0 = matriz apagada
     input  wire [1:0] direction,    // 00=frente, 01=esquerda, 10=direita, 11=tras
     output reg        arrow_din,
     output reg        arrow_clk,
     output reg        arrow_cs
 );
 
-    reg [7:0] arrow_up    [0:7];
-    reg [7:0] arrow_left  [0:7];
-    reg [7:0] arrow_right [0:7];
-    reg [7:0] arrow_back  [0:7];
+    localparam TICK_MAX = 16'd270;
 
-    initial begin
-        arrow_up[0] = 8'b00011000;
-        arrow_up[1] = 8'b00111100;
-        arrow_up[2] = 8'b01111110;
-        arrow_up[3] = 8'b00011000;
-        arrow_up[4] = 8'b00011000;
-        arrow_up[5] = 8'b00011000;
-        arrow_up[6] = 8'b00011000;
-        arrow_up[7] = 8'b00011000;
+    localparam ST_START_FRAME = 3'd0;
+    localparam ST_OUTPUT_BIT  = 3'd1;
+    localparam ST_CLOCK_HIGH  = 3'd2;
+    localparam ST_CLOCK_LOW   = 3'd3;
+    localparam ST_COMMIT_FRAME = 3'd4;
 
-        arrow_left[0] = 8'b00001000;
-        arrow_left[1] = 8'b00011000;
-        arrow_left[2] = 8'b00111000;
-        arrow_left[3] = 8'b01111111;
-        arrow_left[4] = 8'b00111000;
-        arrow_left[5] = 8'b00011000;
-        arrow_left[6] = 8'b00001000;
-        arrow_left[7] = 8'b00000000;
+    reg [15:0] tick      = 0;
+    reg [3:0]  frame_idx = 0;
+    reg [15:0] shift_reg = 0;
+    reg [4:0]  bit_cnt   = 0;
+    reg [2:0]  state     = ST_START_FRAME;
 
-        arrow_right[0] = 8'b00010000;
-        arrow_right[1] = 8'b00011000;
-        arrow_right[2] = 8'b00011100;
-        arrow_right[3] = 8'b11111110;
-        arrow_right[4] = 8'b00011100;
-        arrow_right[5] = 8'b00011000;
-        arrow_right[6] = 8'b00010000;
-        arrow_right[7] = 8'b00000000;
-
-        arrow_back[0] = 8'b00011000;
-        arrow_back[1] = 8'b00011000;
-        arrow_back[2] = 8'b00011000;
-        arrow_back[3] = 8'b00011000;
-        arrow_back[4] = 8'b00011000;
-        arrow_back[5] = 8'b01111110;
-        arrow_back[6] = 8'b00111100;
-        arrow_back[7] = 8'b00011000;
-    end
-
-    function [7:0] row_data;
+    function [7:0] row_pattern;
+        input       on;
         input [1:0] dir;
         input [2:0] row;
         begin
-            case (dir)
-                2'b00: row_data = arrow_up[row];
-                2'b01: row_data = arrow_left[row];
-                2'b10: row_data = arrow_right[row];
-                2'b11: row_data = arrow_back[row];
-                default: row_data = 8'b00000000;
-            endcase
+            if (!on) begin
+                row_pattern = 8'b00000000;
+            end else begin
+                case (dir)
+                    2'b00: case (row)
+                        3'd0: row_pattern = 8'b00011000;
+                        3'd1: row_pattern = 8'b00111100;
+                        3'd2: row_pattern = 8'b01111110;
+                        3'd3: row_pattern = 8'b00011000;
+                        3'd4: row_pattern = 8'b00011000;
+                        3'd5: row_pattern = 8'b00011000;
+                        3'd6: row_pattern = 8'b00011000;
+                        3'd7: row_pattern = 8'b00011000;
+                        default: row_pattern = 8'b00000000;
+                    endcase
+                    2'b01: case (row)
+                        3'd0: row_pattern = 8'b00001000;
+                        3'd1: row_pattern = 8'b00011000;
+                        3'd2: row_pattern = 8'b00111000;
+                        3'd3: row_pattern = 8'b01111111;
+                        3'd4: row_pattern = 8'b00111000;
+                        3'd5: row_pattern = 8'b00011000;
+                        3'd6: row_pattern = 8'b00001000;
+                        3'd7: row_pattern = 8'b00000000;
+                        default: row_pattern = 8'b00000000;
+                    endcase
+                    2'b10: case (row)
+                        3'd0: row_pattern = 8'b00010000;
+                        3'd1: row_pattern = 8'b00011000;
+                        3'd2: row_pattern = 8'b00011100;
+                        3'd3: row_pattern = 8'b11111110;
+                        3'd4: row_pattern = 8'b00011100;
+                        3'd5: row_pattern = 8'b00011000;
+                        3'd6: row_pattern = 8'b00010000;
+                        3'd7: row_pattern = 8'b00000000;
+                        default: row_pattern = 8'b00000000;
+                    endcase
+                    2'b11: case (row)
+                        3'd0: row_pattern = 8'b00011000;
+                        3'd1: row_pattern = 8'b00011000;
+                        3'd2: row_pattern = 8'b00011000;
+                        3'd3: row_pattern = 8'b00011000;
+                        3'd4: row_pattern = 8'b00011000;
+                        3'd5: row_pattern = 8'b01111110;
+                        3'd6: row_pattern = 8'b00111100;
+                        3'd7: row_pattern = 8'b00011000;
+                        default: row_pattern = 8'b00000000;
+                    endcase
+                    default: row_pattern = 8'b00000000;
+                endcase
+            end
         end
     endfunction
 
-    reg [15:0] init_table [0:3];
-    initial begin
-        init_table[0] = {8'h09, 8'h00};  // decode mode OFF (bits crus)
-        init_table[1] = {8'h0B, 8'h07};  // scan limit 8 linhas
-        init_table[2] = {8'h0A, 8'h08};  // intensidade media
-        init_table[3] = {8'h0C, 8'h01};  // sai do shutdown
+    reg [15:0] frame;
+
+    always @(*) begin
+        case (frame_idx)
+            4'd0:  frame = 16'h0F00;
+            4'd1:  frame = 16'h0900;
+            4'd2:  frame = 16'h0B07;
+            4'd3:  frame = 16'h0A0F;
+            4'd4:  frame = 16'h0C01;
+            4'd5:  frame = {8'h01, row_pattern(enable, direction, 3'd0)};
+            4'd6:  frame = {8'h02, row_pattern(enable, direction, 3'd1)};
+            4'd7:  frame = {8'h03, row_pattern(enable, direction, 3'd2)};
+            4'd8:  frame = {8'h04, row_pattern(enable, direction, 3'd3)};
+            4'd9:  frame = {8'h05, row_pattern(enable, direction, 3'd4)};
+            4'd10: frame = {8'h06, row_pattern(enable, direction, 3'd5)};
+            4'd11: frame = {8'h07, row_pattern(enable, direction, 3'd6)};
+            default: frame = {8'h08, row_pattern(enable, direction, 3'd7)};
+        endcase
     end
-
-    localparam INIT = 1'b0, RUN = 1'b1;
-    localparam PH_SETUP = 2'd0, PH_RISE = 2'd1, PH_FALL = 2'd2;
-
-    reg        phase;
-    reg [1:0]  init_idx;
-    reg [2:0]  row_index;   // 0..7
-    reg [15:0] shift_reg;
-    reg [4:0]  bit_cnt;
-    reg [15:0] clk_div;
-    reg        sending;
-    reg [1:0]  clk_phase;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            phase       <= INIT;
-            init_idx    <= 0;
-            row_index   <= 0;
-            arrow_cs  <= 1'b1;
-            arrow_clk <= 1'b0;
-            arrow_din <= 1'b0;
-            clk_div     <= 0;
-            sending     <= 1'b0;
-            bit_cnt     <= 0;
-            clk_phase   <= PH_SETUP;
+            tick       <= 0;
+            frame_idx  <= 0;
+            shift_reg  <= 0;
+            bit_cnt    <= 0;
+            state      <= ST_START_FRAME;
+            arrow_cs   <= 1'b1;
+            arrow_clk  <= 1'b0;
+            arrow_din  <= 1'b0;
+        end else if (tick != TICK_MAX) begin
+            tick <= tick + 1;
         end else begin
-            clk_div <= clk_div + 1;
+            tick <= 0;
 
-            if (clk_div == 16'd50) begin
-                clk_div <= 0;
-
-                if (!sending) begin
-                    if (phase == INIT)
-                        shift_reg <= init_table[init_idx];
-                    else
-                        // 4 bits de padding + 4 bits de endereco + 8 bits de dado = 16
-                        shift_reg <= {4'b0, (row_index + 4'd1), row_data(direction, row_index)};
-
-                    bit_cnt     <= 5'd16;
-                    arrow_cs  <= 1'b0;
-                    sending     <= 1'b1;
-                    clk_phase   <= PH_SETUP;
-                    arrow_clk <= 1'b0;
-                end else if (bit_cnt == 0) begin
-                    arrow_cs  <= 1'b1;
-                    arrow_clk <= 1'b0;
-                    sending     <= 1'b0;
-
-                    if (phase == INIT) begin
-                        if (init_idx == 2'd3)
-                            phase <= RUN;
-                        else
-                            init_idx <= init_idx + 2'd1;
-                    end else begin
-                        if (row_index == 3'd7)
-                            row_index <= 0;
-                        else
-                            row_index <= row_index + 3'd1;
-                    end
-                end else begin
-                    case (clk_phase)
-                        PH_SETUP: begin
-                            arrow_din <= shift_reg[15];
-                            arrow_clk <= 1'b0;
-                            clk_phase   <= PH_RISE;
-                        end
-                        PH_RISE: begin
-                            arrow_clk <= 1'b1;
-                            clk_phase   <= PH_FALL;
-                        end
-                        PH_FALL: begin
-                            arrow_clk <= 1'b0;
-                            shift_reg   <= shift_reg << 1;
-                            bit_cnt     <= bit_cnt - 1;
-                            clk_phase   <= PH_SETUP;
-                        end
-                    endcase
+            case (state)
+                ST_START_FRAME: begin
+                    shift_reg  <= frame;
+                    bit_cnt    <= 5'd16;
+                    arrow_cs   <= 1'b0;
+                    arrow_clk  <= 1'b0;
+                    state      <= ST_OUTPUT_BIT;
                 end
-            end
+
+                ST_OUTPUT_BIT: begin
+                    arrow_din <= shift_reg[15];
+                    arrow_clk <= 1'b0;
+                    state     <= ST_CLOCK_HIGH;
+                end
+
+                ST_CLOCK_HIGH: begin
+                    arrow_clk <= 1'b1;
+                    shift_reg <= shift_reg << 1;
+                    bit_cnt   <= bit_cnt - 1;
+                    state     <= (bit_cnt == 5'd1) ? ST_CLOCK_LOW : ST_OUTPUT_BIT;
+                end
+
+                ST_CLOCK_LOW: begin
+                    arrow_clk <= 1'b0;
+                    state     <= ST_COMMIT_FRAME;
+                end
+
+                ST_COMMIT_FRAME: begin
+                    arrow_cs  <= 1'b1;
+                    frame_idx <= (frame_idx == 4'd12) ? 4'd0 : frame_idx + 1;
+                    state     <= ST_START_FRAME;
+                end
+
+                default: state <= ST_START_FRAME;
+            endcase
         end
     end
 

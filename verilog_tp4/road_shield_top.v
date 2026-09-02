@@ -7,35 +7,28 @@
 //   GPIO9  MISO <- spi_miso   GPIO8  CE0  -> spi_cs_n    GND comum
 
 module road_shield_top #(
-    parameter CLK_HZ     = 27_000_000,
-    parameter GAP_MS     = 60,
-    parameter TRIG_US    = 10,
-    parameter TIMEOUT_MS = 30
+    parameter CLK_HZ      = 27_000_000,
+    parameter GAP_MS      = 60,
+    parameter TRIG_US     = 20,
+    parameter BLIND_US    = 300,
+    parameter WARMUP_MS   = 50,
+    parameter TIMEOUT_MS  = 30,
+    parameter MIN_DIST_CM = 3,
+    parameter MAX_DIST_CM = 50
 ) (
     input  wire       clk,
     input  wire       btn1,
     input  wire       btn2,
-    input  wire       echo_e,
-    input  wire       echo_c,
-    input  wire       echo_d,
+    (* PULL_MODE = "DOWN" *) input  wire echo_e,
+    (* PULL_MODE = "DOWN" *) input  wire echo_c,
+    (* PULL_MODE = "DOWN" *) input  wire echo_d,
     input  wire       spi_sck,
     input  wire       spi_mosi,
     input  wire       spi_cs_n,
     output wire       spi_miso,
-    output wire       trig_e,
-    output wire       trig_c,
-    output wire       trig_d,
-    output wire [7:0] dist_e,
-    output wire [7:0] dist_c,
-    output wire [7:0] dist_d,
-    output wire signed [7:0] vel_e,
-    output wire signed [7:0] vel_c,
-    output wire signed [7:0] vel_d,
-    output wire [7:0] vel_rec,
-    output wire [1:0] dir_fuga,
-    output wire       ciclo_pronto,
-    output wire [3:0] estado_fsm,
-    output wire       cfg_valida,
+    (* PULL_MODE = "DOWN" *) output wire       trig_e,
+    (* PULL_MODE = "DOWN" *) output wire       trig_c,
+    (* PULL_MODE = "DOWN" *) output wire       trig_d,
     output wire       number_din,
     output wire       number_clk,
     output wire       number_cs,
@@ -65,10 +58,37 @@ module road_shield_top #(
     wire [7:0] cfg_vel_max;
     wire [7:0] vel_atual;
 
-    road_sensores #(
+    wire [7:0] dist_e, dist_c, dist_d;
+    wire signed [7:0] vel_e, vel_c, vel_d;
+    wire [7:0] vel_rec;
+    wire [1:0] dir_fuga;
+    wire       ciclo_pronto;
+    wire       timeout_e;
+    wire [3:0] estado_fsm;
+    wire       cfg_valida;
+    wire       valid_e;
+    reg        arrow_on;
+
+    // Seta so com objeto proximo. Parede/mesa longe nao conta.
+    always @(posedge clk) begin
+        if (rst)
+            arrow_on <= 1'b0;
+        else if (valid_e && dist_e >= MIN_DIST_CM && dist_e <= MAX_DIST_CM)
+            arrow_on <= 1'b1;
+        else if (valid_e || timeout_e)
+            arrow_on <= 1'b0;
+    end
+
+    assign number_din = 1'b0;
+    assign number_clk = 1'b0;
+    assign number_cs  = 1'b1;
+
+    road_sensors #(
         .CLK_HZ(CLK_HZ),
         .GAP_MS(GAP_MS),
         .TRIG_US(TRIG_US),
+        .BLIND_US(BLIND_US),
+        .WARMUP_MS(WARMUP_MS),
         .TIMEOUT_MS(TIMEOUT_MS)
     ) sensores (
         .clk           (clk),
@@ -83,7 +103,9 @@ module road_shield_top #(
         .dist_e        (dist_e),
         .dist_c        (dist_c),
         .dist_d        (dist_d),
+        .valid_e       (valid_e),
         .ciclo_pronto  (ciclo_pronto),
+        .timeout_e     (timeout_e),
         .estado_fsm    (estado_fsm),
         .vel_e         (vel_e),
         .vel_c         (vel_c),
@@ -117,6 +139,9 @@ module road_shield_top #(
         .cfg_valid   (cfg_valida)
     );
 
+    // Teste so setas: botões / velocidade local desligados
+    assign vel_atual = 8'd0;
+    /*
     speed_control #(.CLK_HZ(CLK_HZ)) u_speed (
         .clk       (clk),
         .btn1      (btn1),
@@ -124,6 +149,7 @@ module road_shield_top #(
         .max_speed (cfg_vel_max),
         .speed     (vel_atual)
     );
+    */
 
     assist_control u_dec (
         .dist_e        (dist_e),
@@ -157,6 +183,7 @@ module road_shield_top #(
     );
 
     // Esquerda: velocidade atual | Direita: velocidade recomendada
+    /*
     number_control u_display (
         .clk        (clk),
         .rst_n      (~rst),
@@ -166,14 +193,17 @@ module road_shield_top #(
         .number_clk (number_clk),
         .number_cs  (number_cs)
     );
+    */
 
     arrow_display u_arrow (
         .clk        (clk),
         .rst_n      (~rst),
-        .direction  (dir_fuga),
+        .enable     (arrow_on),
+        .direction  (2'b00),
         .arrow_din  (arrow_din),
         .arrow_clk  (arrow_clk),
         .arrow_cs   (arrow_cs)
     );
+
 
 endmodule
