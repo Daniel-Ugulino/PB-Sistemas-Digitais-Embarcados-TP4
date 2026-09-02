@@ -39,6 +39,8 @@ msg_tel_d:      .ascii " d="
 msg_tel_d_len:  .quad . - msg_tel_d
 msg_tel_dir:    .ascii " dir="
 msg_tel_dir_len: .quad . - msg_tel_dir
+msg_session:    .ascii "----"
+msg_session_len: .quad . - msg_session
 
 .extern cfg_dist_free
 .extern cfg_dist_att
@@ -68,6 +70,11 @@ log_init:
 
     ldr x1, =log_fd
     str x0, [x1]
+
+    ldr     x0, =msg_session
+    ldr     x1, =msg_session_len
+    ldr     x1, [x1]
+    bl      log_write
 
     ldp x29, x30, [sp], #16
     ret
