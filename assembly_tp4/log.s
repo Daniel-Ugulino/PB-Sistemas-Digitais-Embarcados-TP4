@@ -39,6 +39,12 @@ msg_tel_d:      .ascii " d="
 msg_tel_d_len:  .quad . - msg_tel_d
 msg_tel_dir:    .ascii " dir="
 msg_tel_dir_len: .quad . - msg_tel_dir
+msg_tel_ve:     .ascii " ve="
+msg_tel_ve_len: .quad . - msg_tel_ve
+msg_tel_vc:     .ascii " vc="
+msg_tel_vc_len: .quad . - msg_tel_vc
+msg_tel_vd:     .ascii " vd="
+msg_tel_vd_len: .quad . - msg_tel_vd
 msg_session:    .ascii "---------------NEW INIT -------------------"
 msg_session_len: .quad . - msg_session
 
@@ -165,6 +171,15 @@ log_format_byte_ones:
     strb    w7, [x1], #1
     ret
 
+// w0 = signed 8-bit (two's complement); imprime com sinal
+log_format_sbyte:
+    sxtb    w0, w0
+    tbz     w0, #31, log_format_byte
+    mov     w2, #'-'
+    strb    w2, [x1], #1
+    neg     w0, w0
+    b       log_format_byte
+
 .section .rodata
 .align 3
 log_action_table:
@@ -255,8 +270,8 @@ log_action_done:
     ldp     x29, x30, [sp], #32
     ret
 
-// void log_telemetry(const uint8_t *pkt) — x0 aponta para os 8 bytes
-//   STX | TYPE | speed | dist_e | dist_c | dist_d | dir | ETX
+// void log_telemetry(const uint8_t *pkt) — x0 aponta para os 11 bytes
+//   STX | TYPE | speed | dist_e | dist_c | dist_d | vel_e | vel_c | vel_d | dir | ETX
 // So grava se alguma distancia (>0) estiver abaixo de cfg_dist_free.
 .global log_telemetry
 log_telemetry:
@@ -320,11 +335,32 @@ log_tel_emit:
     ldrb    w0, [x19, #5]
     bl      log_format_byte
 
+    ldr     x2, =msg_tel_ve
+    ldr     x3, =msg_tel_ve_len
+    ldr     w3, [x3]
+    bl      log_copy_n
+    ldrb    w0, [x19, #6]
+    bl      log_format_sbyte
+
+    ldr     x2, =msg_tel_vc
+    ldr     x3, =msg_tel_vc_len
+    ldr     w3, [x3]
+    bl      log_copy_n
+    ldrb    w0, [x19, #7]
+    bl      log_format_sbyte
+
+    ldr     x2, =msg_tel_vd
+    ldr     x3, =msg_tel_vd_len
+    ldr     w3, [x3]
+    bl      log_copy_n
+    ldrb    w0, [x19, #8]
+    bl      log_format_sbyte
+
     ldr     x2, =msg_tel_dir
     ldr     x3, =msg_tel_dir_len
     ldr     w3, [x3]
     bl      log_copy_n
-    ldrb    w0, [x19, #6]
+    ldrb    w0, [x19, #9]
     bl      log_format_byte
 
     sub     x1, x1, x20

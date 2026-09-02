@@ -66,16 +66,20 @@ module road_shield_top #(
     wire [3:0] estado_fsm;
     wire       cfg_valida;
     wire       valid_e;
+    wire       valid_c;
+    wire       valid_d;
     reg        arrow_on;
 
-    // Seta so com objeto proximo. Parede/mesa longe nao conta.
+    wire near_e = (dist_e >= MIN_DIST_CM) && (dist_e <= cfg_dist_free);
+    wire near_c = (dist_c >= MIN_DIST_CM) && (dist_c <= cfg_dist_free);
+    wire near_d = (dist_d >= MIN_DIST_CM) && (dist_d <= cfg_dist_free);
+
+    // Seta do assist_control apos um ciclo E-C-D com objeto na zona.
     always @(posedge clk) begin
         if (rst)
             arrow_on <= 1'b0;
-        else if (valid_e && dist_e >= MIN_DIST_CM && dist_e <= cfg_dist_free)
-            arrow_on <= 1'b1;
-        else if (valid_e || timeout_e)
-            arrow_on <= 1'b0;
+        else if (ciclo_pronto)
+            arrow_on <= near_e | near_c | near_d;
     end
 
     assign number_din = 1'b0;
@@ -103,6 +107,8 @@ module road_shield_top #(
         .dist_c        (dist_c),
         .dist_d        (dist_d),
         .valid_e       (valid_e),
+        .valid_c       (valid_c),
+        .valid_d       (valid_d),
         .ciclo_pronto  (ciclo_pronto),
         .timeout_e     (timeout_e),
         .estado_fsm    (estado_fsm),
@@ -168,6 +174,9 @@ module road_shield_top #(
         .dist_e       (dist_e),
         .dist_c       (dist_c),
         .dist_d       (dist_d),
+        .vel_e        (vel_e),
+        .vel_c        (vel_c),
+        .vel_d        (vel_d),
         .dir          (dir_fuga),
         .cs_desce     (cs_desce),
         .quadro_ativo (quadro_ativo),
@@ -194,7 +203,7 @@ module road_shield_top #(
         .clk        (clk),
         .rst_n      (~rst),
         .enable     (arrow_on),
-        .direction  (2'b00),
+        .direction  (dir_fuga),
         .arrow_din  (arrow_din),
         .arrow_clk  (arrow_clk),
         .arrow_cs   (arrow_cs)

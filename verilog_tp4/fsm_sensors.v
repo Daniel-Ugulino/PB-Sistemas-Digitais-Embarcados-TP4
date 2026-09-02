@@ -70,18 +70,11 @@ module fsm_sensors #(
         .timeout      (timeout)
     );
 
-    // Teste 1 sensor: so E. Para voltar aos 3, descomenta o mux e apaga estes assign.
-    assign echo_sel = echo_e;
-    assign trig_e   = trig_leitura;
-    assign trig_c   = 1'b0;
-    assign trig_d   = 1'b0;
-    /*
     assign echo_sel = (sensor_atual == 2'd0) ? echo_e :
                       (sensor_atual == 2'd1) ? echo_c : echo_d;
     assign trig_e = (sensor_atual == 2'd0) ? trig_leitura : 1'b0;
     assign trig_c = (sensor_atual == 2'd1) ? trig_leitura : 1'b0;
     assign trig_d = (sensor_atual == 2'd2) ? trig_leitura : 1'b0;
-    */
 
     always @(posedge clk) begin
         if (rst) begin
@@ -121,9 +114,6 @@ module fsm_sensors #(
                 F_MED_E, F_MED_C, F_MED_D: begin
                     if (valido || timeout) begin
                         if (valido) begin
-                            dist_e  <= dist_lida;
-                            valid_e <= 1'b1;
-                            /*
                             if (sensor_atual == 2'd0) begin
                                 dist_e  <= dist_lida;
                                 valid_e <= 1'b1;
@@ -134,14 +124,9 @@ module fsm_sensors #(
                                 dist_d  <= dist_lida;
                                 valid_d <= 1'b1;
                             end
-                            */
-                        end else
+                        end else if (sensor_atual == 2'd0)
                             timeout_e <= 1'b1;
 
-                        // Teste 1 sensor: fecha o ciclo apos E (nao vai a C/D)
-                        ciclo_pronto <= 1'b1;
-                        estado_fsm   <= F_DONE;
-                        /*
                         if (sensor_atual == 2'd2) begin
                             ciclo_pronto <= 1'b1;
                             estado_fsm   <= F_DONE;
@@ -149,7 +134,6 @@ module fsm_sensors #(
                             gap_cnt    <= 32'd0;
                             estado_fsm <= (sensor_atual == 2'd0) ? F_GAP_EC : F_GAP_CD;
                         end
-                        */
                     end
                 end
 

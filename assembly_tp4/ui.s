@@ -273,7 +273,7 @@ ui_show_spi_fail:
     ldr     x1, [x1]
     b       ui_write_spi_line
 
-// void ui_show_spi_rx(void) — mostra os 8 bytes lidos da Tang
+// void ui_show_spi_rx(void) — mostra os 11 bytes lidos da Tang
 .global ui_show_spi_rx
 ui_show_spi_rx:
     stp     x29, x30, [sp, #-32]!
@@ -291,7 +291,7 @@ ui_show_spi_rx:
     sub     sp, sp, #16
 
 ui_rx_loop:
-    cmp     w11, #8
+    cmp     w11, #11
     b.ge    ui_rx_done
 
     ldrb    w0, [x9, x11]
