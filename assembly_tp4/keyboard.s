@@ -2,9 +2,9 @@
 .equ SYS_IOCTL, 29 // ID da syscall sys_ioctl (para controlar dispositivos de E/S).
 .equ TCGETS,    0x5401 // Comando ioctl para obter o estado atual do terminal.
 .equ TCSETS,    0x5402 // Comando ioctl para aplicar um novo estado no terminal.
-.equ ICANON,    0x0002 // Máscara de bit do Modo Canônico (espera o Enter para enviar entrada).
-.equ ECHO,      0x0008 // Máscara de bit do Eco (exibe na tela a tecla digitada)
-.equ STDIN,     0 // File Descriptor da Entrada Padrão (Standard Input)
+.equ ICANON,    0x0002 // Mascara de bit do Modo Canonico (espera o Enter para enviar entrada).
+.equ ECHO,      0x0008 // Mascara de bit do Eco (exibe na tela a tecla digitada)
+.equ STDIN,     0 // File Descriptor da Entrada Padrao (Standard Input)
 
 .section .bss
 .align 8

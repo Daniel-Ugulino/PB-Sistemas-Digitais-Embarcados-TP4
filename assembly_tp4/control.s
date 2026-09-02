@@ -47,7 +47,7 @@ control:
     cmp     w1, #KEY_TABLE_MAX
     b.hi    control_ignore
 
-    ldr     x2, =key_table 
+    ldr     x2, =key_table
     ldr     x3, [x2, w1, uxtw #3] // Instrucao que acessa a tabela, deslocando w1 3 bits para esquerda, o mesmo que multiplicar por 8 devido ao quad da tabela
     br      x3
 
@@ -97,11 +97,11 @@ control_ret:
 
 // saturando em 0..255
 adjust_byte:
-    ldrb    w2, [x9] // Lê 1 byte (8 bits) do endereço apontado por x9 e guarda no registrador w2.
-    add     w2, w2, w1 // SOma o valor do passo
+    ldrb    w2, [x9] // Le 1 byte (8 bits) do endereco apontado por x9 e guarda no registrador w2.
+    add     w2, w2, w1 // Soma o valor do passo
     cmp     w2, #255 // compara com 255
     mov     w3, #255 // coloca 255 em w3
-    csel    w2, w2, w3, le // Caso w2 for menor que 255 mentem seu valor, caso contrario é substituido pelo valor de w3
+    csel    w2, w2, w3, le // Caso w2 for menor que 255 mentem seu valor, caso contrario e substituido pelo valor de w3
     cmp     w2, #0
     csel    w2, w2, wzr, ge // Caso w2 for maior igual a zero mantem seu resultado, contrario substitui pelo registrador wzr, que sempre vale 0
     strb    w2, [x9]
