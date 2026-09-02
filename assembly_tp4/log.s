@@ -39,7 +39,7 @@ msg_tel_d:      .ascii " d="
 msg_tel_d_len:  .quad . - msg_tel_d
 msg_tel_dir:    .ascii " dir="
 msg_tel_dir_len: .quad . - msg_tel_dir
-msg_session:    .ascii "----"
+msg_session:    .ascii "---------------NEW INIT -------------------"
 msg_session_len: .quad . - msg_session
 
 .extern cfg_dist_free
