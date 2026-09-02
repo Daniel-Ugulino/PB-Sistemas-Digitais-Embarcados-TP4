@@ -13,8 +13,7 @@ module road_shield_top #(
     parameter BLIND_US    = 300,
     parameter WARMUP_MS   = 50,
     parameter TIMEOUT_MS  = 30,
-    parameter MIN_DIST_CM = 3,
-    parameter MAX_DIST_CM = 50
+    parameter MIN_DIST_CM = 3
 ) (
     input  wire       clk,
     input  wire       btn1,
@@ -73,7 +72,7 @@ module road_shield_top #(
     always @(posedge clk) begin
         if (rst)
             arrow_on <= 1'b0;
-        else if (valid_e && dist_e >= MIN_DIST_CM && dist_e <= MAX_DIST_CM)
+        else if (valid_e && dist_e >= MIN_DIST_CM && dist_e <= cfg_dist_free)
             arrow_on <= 1'b1;
         else if (valid_e || timeout_e)
             arrow_on <= 1'b0;
@@ -139,9 +138,6 @@ module road_shield_top #(
         .cfg_valid   (cfg_valida)
     );
 
-    // Teste so setas: botões / velocidade local desligados
-    assign vel_atual = 8'd0;
-    /*
     speed_control #(.CLK_HZ(CLK_HZ)) u_speed (
         .clk       (clk),
         .btn1      (btn1),
@@ -149,7 +145,6 @@ module road_shield_top #(
         .max_speed (cfg_vel_max),
         .speed     (vel_atual)
     );
-    */
 
     assist_control u_dec (
         .dist_e        (dist_e),
