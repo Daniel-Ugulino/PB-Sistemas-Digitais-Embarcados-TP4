@@ -74,6 +74,8 @@ msg_tel_vd:     .ascii " vel_d="
 msg_tel_vd_len: .quad . - msg_tel_vd
 msg_session:    .ascii "---------------NEW INIT -------------------"
 msg_session_len: .quad . - msg_session
+msg_sep:        .ascii "----------------------------------------------------------------------------------"
+msg_sep_len:    .quad . - msg_sep
 
 .extern cfg_dist_free
 .extern cfg_dist_att
@@ -347,9 +349,9 @@ log_action_done:
     ret
 
 // void log_telemetry(const uint8_t *raw_pkt)
-//   duas linhas em spi_log.txt:
 //   Log - vel=.. dist_e=.. ... dir=frente|esquerda|direita|tras
 //   AVG - vel=.. dist_e=.. ... dir=frente|esquerda|direita|tras
+//   ----------------------------------------------------------------------------------
 .global log_telemetry
 log_telemetry:
     stp     x29, x30, [sp, #-32]!
@@ -377,6 +379,11 @@ log_telemetry:
     bl      log_format_fields
     sub     x1, x1, x20
     mov     x0, x20
+    bl      log_write
+
+    ldr     x0, =msg_sep
+    ldr     x1, =msg_sep_len
+    ldr     x1, [x1]
     bl      log_write
 
     ldp     x19, x20, [sp, #16]
