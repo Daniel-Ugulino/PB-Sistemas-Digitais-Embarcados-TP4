@@ -6,14 +6,17 @@
 // os 11 bytes numa unica transacao. MOSI vai zerado, entao config_rx ignora
 // o quadro por nao comecar em STX.
 //
-// So grava no log quando speed, distancia, vel ou dir mudam, para nao encher
-// o arquivo a cada loop. Devolve 0 se o pacote for valido, -1 caso contrario
+// Cada quadro valido entra no filter.s. Se o cru mudar, grava em spi_log.txt:
+//   Log - <cru>
+//   AVG <media/moda>
 
 .equ STX,      0x02
 .equ ETX,      0x03
 .equ TYPE_TEL, 0x20
 .equ TEL_LEN,  11
 .equ TEL_PAY,  8
+
+.extern filt_push
 
 .section .bss
 .align 8
@@ -51,16 +54,19 @@ telemetry_poll:
     cmp     w0, #ETX
     b.ne    tel_fail
 
+    add     x0, x9, #2
+    bl      filt_push
+
     ldr     x10, =tel_seen
     ldrb    w3, [x10]
     cbz     w3, tel_novo
 
     ldr     x11, =tel_last_pay
+    add     x12, x9, #2
     mov     w13, #0
 tel_cmp:
     cmp     w13, #TEL_PAY
     b.ge    tel_ok
-    add     x12, x9, #2
     ldrb    w0, [x12, w13, uxtw]
     ldrb    w1, [x11, w13, uxtw]
     cmp     w0, w1
@@ -73,11 +79,11 @@ tel_novo:
     strb    w3, [x10]
 
     ldr     x11, =tel_last_pay
+    add     x12, x9, #2
     mov     w13, #0
 tel_save:
     cmp     w13, #TEL_PAY
     b.ge    tel_saved
-    add     x12, x9, #2
     ldrb    w0, [x12, w13, uxtw]
     strb    w0, [x11, w13, uxtw]
     add     w13, w13, #1
