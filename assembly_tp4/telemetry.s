@@ -6,7 +6,8 @@
 // os 11 bytes numa unica transacao. MOSI vai zerado, entao config_rx ignora
 // o quadro por nao comecar em STX.
 //
-// Cada quadro valido entra no filter.s. Se o cru mudar, grava em spi_log.txt:
+// Cada quadro valido entra no filter.s. Se o cru mudar e alguma distancia
+// (e/c/d) for menor que cfg_dist_free, grava em spi_log.txt:
 //   Log - <cru>
 //   AVG <media/moda>
 
@@ -17,6 +18,7 @@
 .equ TEL_PAY,  8
 
 .extern filt_push
+.extern cfg_dist_free
 
 .section .bss
 .align 8
@@ -90,6 +92,18 @@ tel_save:
     b       tel_save
 
 tel_saved:
+    ldr     x0, =cfg_dist_free
+    ldrb    w1, [x0]
+    ldrb    w0, [x9, #3]
+    cmp     w0, w1
+    b.lo    tel_log
+    ldrb    w0, [x9, #4]
+    cmp     w0, w1
+    b.lo    tel_log
+    ldrb    w0, [x9, #5]
+    cmp     w0, w1
+    b.hs    tel_ok
+tel_log:
     mov     x0, x9
     bl      log_telemetry
 

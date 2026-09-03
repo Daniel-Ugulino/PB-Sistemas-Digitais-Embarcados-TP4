@@ -1,4 +1,4 @@
-// Media NEON/SIMD das ultimas 20 amostras do payload SPI (config_tx.v):
+// Media NEON/SIMD das ultimas 50 amostras do payload SPI (config_tx.v):
 //   speed | dist_e | dist_c | dist_d | vel_e | vel_c | vel_d | dir
 //
 // speed + 3 distancias: media unsigned (uaddw + fdiv em 4 pistas)
@@ -11,7 +11,7 @@
 
 .arch armv8-a
 
-.equ FILT_WIN, 20
+.equ FILT_WIN, 50
 
 .section .data
 .align 16
@@ -25,7 +25,7 @@ filt_out:
 
 .section .bss
 .align 16
-filt_hist:      .skip 160
+filt_hist:      .skip 400
 .global filt_n
 filt_n:         .skip 1
 filt_ptr:       .skip 1
@@ -60,7 +60,7 @@ filt_push:
     ldp     x29, x30, [sp], #16
     ret
 
-// Recalcula filt_out a partir de hist[0 .. n-1] (n<=20, janela ja linear)
+// Recalcula filt_out a partir de hist[0 .. n-1] (n<=50, janela ja linear)
 filt_compute:
     ldr     x0, =filt_hist
     ldr     x1, =filt_n
