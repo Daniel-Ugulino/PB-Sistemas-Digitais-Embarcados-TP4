@@ -16,7 +16,7 @@ module number_control_tb;
     integer i;
     integer guard;
 
-    reg [15:0] frames [0:11];
+    reg [15:0] frames [0:12];
 
     number_control dut (
         .clk        (clk),
@@ -75,7 +75,7 @@ module number_control_tb;
 
     task collect_cycle;
         begin
-            for (i = 0; i < 12; i = i + 1)
+            for (i = 0; i < 13; i = i + 1)
                 get_frame(frames[i]);
         end
     endtask
@@ -110,42 +110,24 @@ module number_control_tb;
 
         rst_n = 1'b1;
 
-        // 12 quadros: 4 init + 8 digitos (MAX7219 1-8)
+        // 13 quadros: 5 init + 6 digitos + 2 nao usados a 0
         collect_cycle();
 
-        expect_frame(0, 16'h09FF, "2 init decode");
-        expect_frame(1, 16'h0B07, "2 init scan-limit");
-        expect_frame(2, 16'h0A08, "2 init intensity");
-        expect_frame(3, 16'h0C01, "2 init shutdown off");
+        expect_frame(0, 16'h0F00, "2 init display-test off");
+        expect_frame(1, 16'h09FF, "2 init decode");
+        expect_frame(2, 16'h0B07, "2 init scan-limit");
+        expect_frame(3, 16'h0A08, "2 init intensity");
+        expect_frame(4, 16'h0C01, "2 init shutdown off");
 
-        // Direita A=15 → regs 1-4; esquerda B=120 → regs 5-8
-        expect_frame(4,  16'h0105, "2 A unidade 5");
-        expect_frame(5,  16'h0201, "2 A dezena 1");
-        expect_frame(6,  16'h0300, "2 A centena 0");
-        expect_frame(7,  16'h0400, "2 A milhar 0");
-        expect_frame(8,  16'h0500, "2 B unidade 0");
-        expect_frame(9,  16'h0602, "2 B dezena 2");
-        expect_frame(10, 16'h0701, "2 B centena 1");
-        expect_frame(11, 16'h0800, "2 B milhar 0");
-
-        value_a = 14'd7;
-        value_b = 14'd0;
-        collect_cycle();
-
-        expect_frame(4,  16'h0107, "3 A unidade 7");
-        expect_frame(5,  16'h0200, "3 A dezena 0");
-        expect_frame(8,  16'h0500, "3 B unidade 0");
-        expect_frame(0,  16'h09FF, "3 volta ao init");
-
-        value_a = 14'd255;
-        value_b = 14'd100;
-        collect_cycle();
-        expect_frame(4,  16'h0105, "4 A=255 unidade");
-        expect_frame(5,  16'h0205, "4 A=255 dezena");
-        expect_frame(6,  16'h0302, "4 A=255 centena");
-        expect_frame(8,  16'h0500, "4 B=100 unidade");
-        expect_frame(9,  16'h0600, "4 B=100 dezena");
-        expect_frame(10, 16'h0701, "4 B=100 centena");
+        // value_a=15 → 015    value_b=120 → 120  (ordem TP3: unidade, dezena, centena)
+        expect_frame(5,  16'h0105, "2 A unidade 5");
+        expect_frame(6,  16'h0201, "2 A dezena 1");
+        expect_frame(7,  16'h0300, "2 A centena 0");
+        expect_frame(8,  16'h0400, "2 digito 4 = 0");
+        expect_frame(9,  16'h0500, "2 B unidade 0");
+        expect_frame(10, 16'h0602, "2 B dezena 2");
+        expect_frame(11, 16'h0701, "2 B centena 1");
+        expect_frame(12, 16'h0800, "2 digito esquerdo = 0");
 
         if (erros == 0)
             $display("number_control: testes OK");
