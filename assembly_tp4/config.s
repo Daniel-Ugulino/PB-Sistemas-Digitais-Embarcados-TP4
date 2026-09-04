@@ -15,8 +15,8 @@
 .global cfg_dist_free
 .global cfg_dist_att
 .global cfg_vel_max
-cfg_dist_free:       .byte 100
-cfg_dist_att:        .byte 50
+cfg_dist_free:       .byte 50
+cfg_dist_att:        .byte 30
 cfg_vel_max:         .byte 120
 
 .section .bss

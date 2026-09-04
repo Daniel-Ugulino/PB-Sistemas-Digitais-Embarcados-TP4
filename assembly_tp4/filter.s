@@ -1,8 +1,7 @@
 // Media NEON/SIMD das ultimas 50 amostras do payload SPI (config_tx.v):
 //   speed | dist_e | dist_c | dist_d | vel_e | vel_c | vel_d | dir
 //
-// speed + 3 distancias: media unsigned (uaddw + fdiv em 4 pistas)
-// 3 velocidades:        media signed   (saddw + fdiv em 4 pistas)
+// speed + 3 distancias + 3 vel. obstaculo: media unsigned
 // dir:                  moda (mais frequente; empate = amostra mais nova)
 //
 // void filt_push(const uint8_t *pay)   // 8 bytes do payload
@@ -68,7 +67,6 @@ filt_compute:
     cbz     w1, filt_done
 
     movi    v0.8h, #0
-    movi    v1.8h, #0
     mov     w2, wzr
     sub     sp, sp, #16
     str     xzr, [sp]
@@ -79,7 +77,6 @@ filt_sum:
 
     ld1     {v2.8b}, [x0], #8
     uaddw   v0.8h, v0.8h, v2.8b
-    saddw   v1.8h, v1.8h, v2.8b
 
     umov    w3, v2.b[7]
     and     w3, w3, #3
@@ -101,13 +98,13 @@ filt_avg:
     xtn     v4.4h, v4.4s
     xtn     v4.8b, v4.8h
 
-    ext     v5.16b, v1.16b, v1.16b, #8
-    sxtl    v5.4s, v5.4h
-    scvtf   v5.4s, v5.4s
+    ext     v5.16b, v0.16b, v0.16b, #8
+    uxtl    v5.4s, v5.4h
+    ucvtf   v5.4s, v5.4s
     fdiv    v5.4s, v5.4s, v3.4s
-    fcvtns  v5.4s, v5.4s
-    sqxtn   v5.4h, v5.4s
-    sqxtn   v5.8b, v5.8h
+    fcvtnu  v5.4s, v5.4s
+    xtn     v5.4h, v5.4s
+    xtn     v5.8b, v5.8h
 
     ins     v4.b[4], v5.b[0]
     ins     v4.b[5], v5.b[1]
