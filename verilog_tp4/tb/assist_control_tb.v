@@ -13,7 +13,7 @@ module assist_control_tb;
     localparam [1:0] TRAS     = 2'b11;
 
     reg  [7:0] dist_e, dist_c, dist_d;
-    reg  signed [7:0] vel_e, vel_c, vel_d;
+    reg  [7:0] vel_e, vel_c, vel_d;
     reg  [7:0] vel_atual;
     reg  [7:0] cfg_dist_free, cfg_dist_att, cfg_vel_max;
     wire [7:0] vel_rec;
@@ -38,7 +38,7 @@ module assist_control_tb;
 
     task apply;
         input [7:0] e, c, d;
-        input signed [7:0] ve, vc, vd;
+        input [7:0] ve, vc, vd;
         begin
             dist_e = e; dist_c = c; dist_d = d;
             vel_e  = ve; vel_c = vc; vel_d = vd;
@@ -71,54 +71,54 @@ module assist_control_tb;
         cfg_vel_max   = VEL_MAX;
         vel_atual     = VEL_NOW;
 
-        // 1. Centro livre, ninguem fecha
-        apply(8'd120, 8'd140, 8'd110, 8'sd0, 8'sd4, 8'sd0);
+        // 1. Centro livre, obstaculos acompanham o carro
+        apply(8'd120, 8'd140, 8'd110, 8'd80, 8'd80, 8'd80);
         check(FRENTE, 8'd80, "1 livre C, sem fechar");
 
         // 2. Centro atencao, esquerda livre
-        apply(8'd130, 8'd70, 8'd40, 8'sd0, 8'sd0, 8'sd0);
+        apply(8'd130, 8'd70, 8'd40, 8'd80, 8'd80, 8'd80);
         check(ESQUERDA, 8'd60, "2 C atencao, E livre");
 
         // 3. Ninguem livre; C e E atencao
-        apply(8'd60, 8'd70, 8'd40, 8'sd0, 8'sd0, 8'sd0);
+        apply(8'd60, 8'd70, 8'd40, 8'd80, 8'd80, 8'd80);
         check(FRENTE, 8'd60, "3 so atencao, prefere C");
 
-        // 4. C livre mas fecha forte; E atencao segura
-        apply(8'd80, 8'd150, 8'd40, 8'sd2, -8'sd18, 8'sd0);
-        check(ESQUERDA, 8'd80, "4 veto C (vel=-18), E atencao");
+        // 4. C livre mas 18 km/h mais lento; E atencao segura
+        apply(8'd80, 8'd150, 8'd40, 8'd80, 8'd62, 8'd80);
+        check(ESQUERDA, 8'd80, "4 veto C (fecha 18), E atencao");
 
         // 5. Tudo critico
-        apply(8'd25, 8'd25, 8'd25, -8'sd3, 8'sd0, 8'sd1);
+        apply(8'd25, 8'd25, 8'd25, 8'd80, 8'd80, 8'd80);
         check(TRAS, 8'd40, "5 tudo critico");
 
         // 6. Tudo atencao, D fecha
-        apply(8'd70, 8'd65, 8'd55, 8'sd0, 8'sd0, -8'sd25);
+        apply(8'd70, 8'd65, 8'd55, 8'd80, 8'd80, 8'd55);
         check(FRENTE, 8'd60, "6 atencao, D vetada");
 
         // 7. So D livre
-        apply(8'd30, 8'd20, 8'd120, -8'sd12, -8'sd20, 8'sd0);
+        apply(8'd30, 8'd20, 8'd120, 8'd60, 8'd50, 8'd80);
         check(DIREITA, 8'd40, "7 so D livre");
 
-        // 8. vel=0 (antes de 4 ecos): so cfg
-        apply(8'd40, 8'd140, 8'd40, 8'sd0, 8'sd0, 8'sd0);
-        check(FRENTE, 8'd80, "8 vel=0, C livre");
+        // 8. vel_obs=vel_atual (warmup do measure_speed): seguro
+        apply(8'd40, 8'd140, 8'd40, 8'd80, 8'd80, 8'd80);
+        check(FRENTE, 8'd80, "8 C livre, acompanha");
 
-        // 9. Limiar: -9 ainda seguro
-        apply(8'd40, 8'd140, 8'd40, 8'sd0, -8'sd9, 8'sd0);
-        check(FRENTE, 8'd80, "9 vel_c=-9 ainda segura");
+        // 9. Limiar: fecha 9 km/h ainda seguro
+        apply(8'd40, 8'd140, 8'd40, 8'd80, 8'd71, 8'd80);
+        check(FRENTE, 8'd80, "9 vel_c=71 ainda segura");
 
-        // 10. Limiar: -10 veta o centro livre
-        apply(8'd80, 8'd140, 8'd40, 8'sd0, -8'sd10, 8'sd0);
-        check(ESQUERDA, 8'd80, "10 vel_c=-10 veta C, E atencao");
+        // 10. Limiar: fecha 10 km/h veta o centro
+        apply(8'd80, 8'd140, 8'd40, 8'd80, 8'd70, 8'd80);
+        check(ESQUERDA, 8'd80, "10 vel_c=70 veta C, E atencao");
 
         // 11. vel_atual acima do teto do Pi
         vel_atual = 8'd200;
-        apply(8'd120, 8'd140, 8'd110, 8'sd0, 8'sd0, 8'sd0);
+        apply(8'd120, 8'd140, 8'd110, 8'd200, 8'd200, 8'd200);
         check(FRENTE, VEL_MAX, "11 base = min(atual, vel_max)");
 
         // 12. Critico com atual < reducao → satura em 0
         vel_atual = 8'd30;
-        apply(8'd20, 8'd20, 8'd20, 8'sd0, 8'sd0, 8'sd0);
+        apply(8'd20, 8'd20, 8'd20, 8'd30, 8'd30, 8'd30);
         check(TRAS, 8'd0, "12 30-40 satura em 0");
 
         if (erros == 0)

@@ -5,6 +5,8 @@ module road_sensores_tb;
     localparam CLK_HZ     = 100_000;
     localparam GAP_MS     = 1;
     localparam TRIG_US    = 10;
+    localparam BLIND_US   = 200;
+    localparam WARMUP_MS  = 0;
     localparam TIMEOUT_MS = 5;
     localparam CLK_NS     = 10;
 
@@ -23,20 +25,23 @@ module road_sensores_tb;
     wire       valid_e, valid_c, valid_d;
     wire       ciclo_pronto;
     wire [3:0] estado_fsm;
-    wire signed [7:0] vel_e, vel_c, vel_d;
+    wire [7:0] vel_e, vel_c, vel_d;
 
     integer erros;
     integer vistos;
 
-    road_sensores #(
-        .CLK_HZ    (CLK_HZ),
-        .GAP_MS    (GAP_MS),
-        .TRIG_US   (TRIG_US),
-        .TIMEOUT_MS(TIMEOUT_MS)
+    road_sensors #(
+        .CLK_HZ     (CLK_HZ),
+        .GAP_MS     (GAP_MS),
+        .TRIG_US    (TRIG_US),
+        .BLIND_US   (BLIND_US),
+        .WARMUP_MS  (WARMUP_MS),
+        .TIMEOUT_MS (TIMEOUT_MS)
     ) dut (
         .clk          (clk),
         .rst          (rst),
         .iniciar      (iniciar),
+        .vel_atual    (8'd0),
         .echo_e       (echo_e),
         .echo_c       (echo_c),
         .echo_d       (echo_d),
