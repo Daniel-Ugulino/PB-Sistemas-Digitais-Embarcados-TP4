@@ -11,6 +11,7 @@ module road_sensors #(
     input  wire       clk,
     input  wire       rst,
     input  wire       iniciar,
+    input  wire [7:0] vel_atual,
     input  wire       echo_e,
     input  wire       echo_c,
     input  wire       echo_d,
@@ -29,9 +30,9 @@ module road_sensors #(
     output wire [7:0] dist_atual_e,
     output wire [7:0] dist_atual_c,
     output wire [7:0] dist_atual_d,
-    output wire signed [7:0] vel_e,
-    output wire signed [7:0] vel_c,
-    output wire signed [7:0] vel_d
+    output wire [7:0] vel_e,
+    output wire [7:0] vel_c,
+    output wire [7:0] vel_d
 );
 
     wire valid_e_p;
@@ -70,31 +71,34 @@ module road_sensors #(
     assign valid_c = valid_c_p;
     assign valid_d = valid_d_p;
 
-    measure_speed vel_mod_e (
+    measure_speed #(.CLK_HZ(CLK_HZ)) vel_mod_e (
         .clk            (clk),
         .rst            (rst),
         .amostra_valida (valid_e_p),
         .distancia_cm   (dist_e),
+        .vel_atual      (vel_atual),
         .dist_atual     (dist_atual_e),
-        .velocidade_cm  (vel_e)
+        .velocidade     (vel_e)
     );
 
-    measure_speed vel_mod_c (
+    measure_speed #(.CLK_HZ(CLK_HZ)) vel_mod_c (
         .clk            (clk),
         .rst            (rst),
         .amostra_valida (valid_c_p),
         .distancia_cm   (dist_c),
+        .vel_atual      (vel_atual),
         .dist_atual     (dist_atual_c),
-        .velocidade_cm  (vel_c)
+        .velocidade     (vel_c)
     );
 
-    measure_speed vel_mod_d (
+    measure_speed #(.CLK_HZ(CLK_HZ)) vel_mod_d (
         .clk            (clk),
         .rst            (rst),
         .amostra_valida (valid_d_p),
         .distancia_cm   (dist_d),
+        .vel_atual      (vel_atual),
         .dist_atual     (dist_atual_d),
-        .velocidade_cm  (vel_d)
+        .velocidade     (vel_d)
     );
 
 endmodule

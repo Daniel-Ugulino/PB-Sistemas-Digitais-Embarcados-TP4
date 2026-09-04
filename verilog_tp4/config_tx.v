@@ -8,9 +8,9 @@ module config_tx (
     input  wire [7:0] dist_e,
     input  wire [7:0] dist_c,
     input  wire [7:0] dist_d,
-    input  wire signed [7:0] vel_e,
-    input  wire signed [7:0] vel_c,
-    input  wire signed [7:0] vel_d,
+    input  wire [7:0] vel_e,
+    input  wire [7:0] vel_c,
+    input  wire [7:0] vel_d,
     input  wire [1:0] dir,
 
     input  wire       cs_desce,

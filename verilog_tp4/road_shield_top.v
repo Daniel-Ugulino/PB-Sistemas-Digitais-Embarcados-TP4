@@ -58,7 +58,7 @@ module road_shield_top #(
     wire [7:0] vel_atual;
 
     wire [7:0] dist_e, dist_c, dist_d;
-    wire signed [7:0] vel_e, vel_c, vel_d;
+    wire [7:0] vel_e, vel_c, vel_d;
     wire [7:0] vel_rec;
     wire [1:0] dir_fuga;
     wire       ciclo_pronto;
@@ -82,10 +82,6 @@ module road_shield_top #(
             arrow_on <= near_e | near_c | near_d;
     end
 
-    assign number_din = 1'b0;
-    assign number_clk = 1'b0;
-    assign number_cs  = 1'b1;
-
     road_sensors #(
         .CLK_HZ(CLK_HZ),
         .GAP_MS(GAP_MS),
@@ -97,6 +93,7 @@ module road_shield_top #(
         .clk           (clk),
         .rst           (rst),
         .iniciar       (1'b1),
+        .vel_atual     (vel_atual),
         .echo_e        (echo_e),
         .echo_c        (echo_c),
         .echo_d        (echo_d),
@@ -186,8 +183,7 @@ module road_shield_top #(
         .tx_byte      (tx_byte)
     );
 
-    // Esquerda: velocidade atual | Direita: velocidade recomendada
-    /*
+    // MAX7219: direita = vel_atual | esquerda = vel_rec
     number_control u_display (
         .clk        (clk),
         .rst_n      (~rst),
@@ -197,7 +193,6 @@ module road_shield_top #(
         .number_clk (number_clk),
         .number_cs  (number_cs)
     );
-    */
 
     arrow_display u_arrow (
         .clk        (clk),
