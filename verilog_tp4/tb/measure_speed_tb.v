@@ -23,7 +23,7 @@ module measure_speed_tb;
         .distancia_cm   (dist),
         .vel_atual      (vel_car),
         .dist_atual     (dist_atual),
-        .velocidade     (vel)
+        .vel_obstaculo  (vel)
     );
 
     initial clk = 1'b0;
@@ -64,7 +64,7 @@ module measure_speed_tb;
             if (vel === exp)
                 $display("OK   %0s: vel=%0d", name, vel);
             else begin
-                $display("FAIL %0s: vel=%0d (exp %0d)", name, vel, exp);
+                $display("ERROR %0s: vel=%0d (exp %0d)", name, vel, exp);
                 erros = erros + 1;
             end
         end
@@ -84,30 +84,30 @@ module measure_speed_tb;
         rst = 1'b0;
         wait_clk(2);
 
-        // 1-3. Janela ainda a encher: devolve vel_atual
+        // 1. Primeira amostra: janela vazia → vel_atual
         push(8'd80);
         check(8'd36, "1 primeira amostra = vel_atual");
-        wait_ms(200);
-        push(8'd80);
-        check(8'd36, "2 segunda amostra = vel_atual");
-        wait_ms(200);
-        push(8'd80);
-        check(8'd36, "3 terceira amostra = vel_atual");
 
-        // 4. Quarta (HIST_MIN): vao constante → v_obs = vel_atual
-        wait_ms(200);
+        // 2. Terceira amostra: ainda em warmup
+        wait_ms(90);
         push(8'd80);
-        check(8'd36, "4 vao constante, v_obs=36");
+        wait_ms(90);
+        push(8'd80);
+        check(8'd36, "2 terceira amostra = vel_atual");
 
-        // 5. Fecha 20 cm sobre a janela (~800 ms desde hist[0])
-        //    v_rel ≈ -20*36/800 = -1  →  |36-1|=35
-        //    (se fosse so o ultimo eco: -4 → 32)
-        wait_ms(200);
-        push(8'd60);
-        check(8'd35, "5 janela BRAM, nao so o ultimo eco");
+        // 3. Quarta (AMOSTRAS_MIN): vao constante → vel_obstaculo = vel_atual
+        wait_ms(90);
+        push(8'd80);
+        check(8'd36, "3 vao constante, v_obs=36");
+
+        // 4. Fecha 80 cm sobre ~360 ms (hist[0] → agora)
+        //    v_rel = -80*36/360 = -8  →  |36-8|=28
+        wait_ms(90);
+        push(8'd0);
+        check(8'd28, "4 janela BRAM, vel_obs=28");
 
         if (erros == 0)
-            $display("measure_speed: testes OK");
+            $display("measure_speed: 4 testes OK");
         else
             $display("measure_speed: %0d FALHAS", erros);
 

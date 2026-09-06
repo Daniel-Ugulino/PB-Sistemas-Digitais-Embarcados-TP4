@@ -1,5 +1,11 @@
 `timescale 1ns / 1ps
 
+// Ciclo E → C → D do road_sensors, com clock acelerado (100 kHz).
+// 1. Eco no E ~50 cm
+// 2. C sem eco (timeout)
+// 3. D com echo preso em 1 (timeout)
+// 4. Segundo ciclo: E de novo ~50 cm
+
 module road_sensores_tb;
 
     localparam CLK_HZ     = 100_000;
@@ -10,25 +16,25 @@ module road_sensores_tb;
     localparam TIMEOUT_MS = 5;
     localparam CLK_NS     = 10;
 
-    // 50 cm @ 58 us/cm = 2900 us. CLK_HZ=100 kHz → 10 us/clk → 290 clocks
+    // 50 cm × 58 us/cm = 2900 us. 1 clk = 10 us → 290 ciclos
     localparam ECHO_50_CYC = 290;
+
+    localparam F_MED_C = 4'd3;
 
     reg  clk;
     reg  rst;
     reg  iniciar;
-    reg  echo_e;
-    reg  echo_c;
-    reg  echo_d;
+    reg  echo_e, echo_c, echo_d;
 
     wire trig_e, trig_c, trig_d;
     wire [7:0] dist_e, dist_c, dist_d;
-    wire       valid_e, valid_c, valid_d;
-    wire       ciclo_pronto;
+    wire valid_e, valid_c, valid_d;
+    wire ciclo_pronto;
     wire [3:0] estado_fsm;
     wire [7:0] vel_e, vel_c, vel_d;
 
     integer erros;
-    integer vistos;
+    integer visto;
 
     road_sensors #(
         .CLK_HZ     (CLK_HZ),
@@ -74,7 +80,7 @@ module road_sensores_tb;
             if (cond)
                 $display("OK   %0s", name);
             else begin
-                $display("FAIL %0s", name);
+                $display("ERROR %0s", name);
                 erros = erros + 1;
             end
         end
@@ -89,16 +95,47 @@ module road_sensores_tb;
         end
     endtask
 
-    task wait_trig_fall;
-        input trig;
+    // Espera o pulso TRIG no fio (nao passar o sinal como input —
+    // isso copia o valor e o while nunca ve a mudanca).
+    task wait_trig_e;
         integer guard;
         begin
             guard = 0;
-            while (!trig && guard < 50000) begin
+            while (!trig_e && guard < 50000) begin
                 @(posedge clk);
                 guard = guard + 1;
             end
-            while (trig && guard < 50000) begin
+            while (trig_e && guard < 50000) begin
+                @(posedge clk);
+                guard = guard + 1;
+            end
+        end
+    endtask
+
+    task wait_trig_c;
+        integer guard;
+        begin
+            guard = 0;
+            while (!trig_c && guard < 50000) begin
+                @(posedge clk);
+                guard = guard + 1;
+            end
+            while (trig_c && guard < 50000) begin
+                @(posedge clk);
+                guard = guard + 1;
+            end
+        end
+    endtask
+
+    task wait_trig_d;
+        integer guard;
+        begin
+            guard = 0;
+            while (!trig_d && guard < 50000) begin
+                @(posedge clk);
+                guard = guard + 1;
+            end
+            while (trig_d && guard < 50000) begin
                 @(posedge clk);
                 guard = guard + 1;
             end
@@ -106,23 +143,23 @@ module road_sensores_tb;
     endtask
 
     task pulse_echo_e;
-        input integer high_cyc;
+        input integer n;
         integer i;
         begin
             echo_e = 1'b1;
-            for (i = 0; i < high_cyc; i = i + 1)
+            for (i = 0; i < n; i = i + 1)
                 @(posedge clk);
             echo_e = 1'b0;
         end
     endtask
 
     task wait_valid_e;
-        output seen;
+        output integer seen;
         integer guard;
         begin
             seen  = 0;
             guard = 0;
-            while (guard < 200000 && !valid_e && estado_fsm != 4'd2) begin
+            while (guard < 200000 && !valid_e) begin
                 @(posedge clk);
                 guard = guard + 1;
             end
@@ -147,57 +184,57 @@ module road_sensores_tb;
         wait_clk(2);
         iniciar = 1'b1;
 
-        // 1. Eco E ~50 cm → dist_e atualiza, valid_e pulsa
-        wait_trig_fall(trig_e);
+        // 1. Sensor E: eco de 50 cm
+        wait_trig_e();
         wait_clk(3);
         pulse_echo_e(ECHO_50_CYC);
-        vistos = 0;
-        wait_valid_e(vistos);
-        check(vistos === 1, "1 valid_e apos eco 50cm");
-        check(dist_e >= 8'd47 && dist_e <= 8'd53, "1 dist_e ~50cm");
+        wait_valid_e(visto);
+        check(visto === 1, "1 valid_e apos eco 50 cm");
+        check(dist_e >= 8'd47 && dist_e <= 8'd53, "1 dist_e ~50 cm");
 
-        // 2. C sem eco → timeout: dist_c fica 0, valid_c nao pulsa
-        wait_trig_fall(trig_c);
-        vistos = 0;
-        begin : watch_c
+        // 2. Sensor C: sem eco → timeout, dist/vel ficam 0
+        wait_trig_c();
+        visto = 0;
+        begin : timeout_c
             integer g;
             g = 0;
-            while (g < 200000 && estado_fsm != 4'd4 && !ciclo_pronto) begin
+            while (g < 200000 && estado_fsm == F_MED_C) begin
                 @(posedge clk);
                 g = g + 1;
-                if (valid_c) vistos = 1;
+                if (valid_c)
+                    visto = 1;
             end
         end
-        check(vistos === 0, "2 valid_c silencioso no timeout");
-        check(dist_c === 8'd0, "2 dist_c mantem ultimo (0)");
-        check(vel_c === 8'sd0, "2 vel_c nao corrompe");
+        check(visto === 0, "2 valid_c silencioso no timeout");
+        check(dist_c === 8'd0, "2 dist_c permanece 0");
+        check(vel_c === 8'd0, "2 vel_c permanece 0");
 
-        // 3. D com ECHO preso em 1 → timeout, dist_d fica 0
-        wait_trig_fall(trig_d);
+        // 3. Sensor D: echo preso em 1 → timeout, dist_e nao muda
+        wait_trig_d();
         echo_d = 1'b1;
-        vistos = 0;
-        begin : watch_d
+        visto = 0;
+        begin : timeout_d
             integer g;
             g = 0;
             while (g < 200000 && !ciclo_pronto) begin
                 @(posedge clk);
                 g = g + 1;
-                if (valid_d) vistos = 1;
+                if (valid_d)
+                    visto = 1;
             end
         end
         echo_d = 1'b0;
-        check(vistos === 0, "3 valid_d silencioso no echo preso");
-        check(dist_d === 8'd0, "3 dist_d mantem ultimo (0)");
-        check(dist_e >= 8'd47 && dist_e <= 8'd53, "3 dist_e nao foi a 255");
+        check(visto === 0, "3 valid_d silencioso com echo preso");
+        check(dist_d === 8'd0, "3 dist_d permanece 0");
+        check(dist_e >= 8'd47 && dist_e <= 8'd53, "3 dist_e ainda ~50 cm");
 
-        // 4. Segundo scan: E de novo ~50 cm (ultimo bom permanece entre falhas)
-        wait_trig_fall(trig_e);
+        // 4. Segundo ciclo: E de novo ~50 cm
+        wait_trig_e();
         wait_clk(3);
         pulse_echo_e(ECHO_50_CYC);
-        vistos = 0;
-        wait_valid_e(vistos);
-        check(vistos === 1, "4 segundo valid_e");
-        check(dist_e >= 8'd47 && dist_e <= 8'd53, "4 dist_e ainda ~50cm");
+        wait_valid_e(visto);
+        check(visto === 1, "4 segundo valid_e");
+        check(dist_e >= 8'd47 && dist_e <= 8'd53, "4 dist_e ainda ~50 cm");
 
         if (erros == 0)
             $display("road_sensores: testes OK");

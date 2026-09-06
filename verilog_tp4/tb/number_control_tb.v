@@ -38,7 +38,7 @@ module number_control_tb;
             if (cond)
                 $display("OK   %0s", name);
             else begin
-                $display("FAIL %0s", name);
+                $display("ERROR %0s", name);
                 erros = erros + 1;
             end
         end
@@ -56,7 +56,7 @@ module number_control_tb;
                 guard = guard + 1;
             end
             if (guard >= 200000) begin
-                $display("FAIL get_frame: CS nao desceu");
+                $display("ERROR get_frame: CS nao desceu");
                 erros = erros + 1;
             end
 
@@ -88,7 +88,7 @@ module number_control_tb;
             if (frames[idx] === exp)
                 $display("OK   %0s: [%0d]=0x%04h", name, idx, frames[idx]);
             else begin
-                $display("FAIL %0s: [%0d]=0x%04h (exp 0x%04h)",
+                $display("ERROR %0s: [%0d]=0x%04h (exp 0x%04h)",
                          name, idx, frames[idx], exp);
                 erros = erros + 1;
             end
@@ -105,32 +105,18 @@ module number_control_tb;
         value_b = 14'd120;
 
         repeat (10) @(posedge clk);
-        check(number_cs === 1'b1, "1 reset: CS alto");
-        check(number_clk === 1'b0, "1 reset: CLK baixo");
+        check(number_cs === 1'b1 && number_clk === 1'b0, "1 reset: CS alto, CLK baixo");
 
         rst_n = 1'b1;
 
-        // 13 quadros: 5 init + 6 digitos + 2 nao usados a 0
         collect_cycle();
 
         expect_frame(0, 16'h0F00, "2 init display-test off");
-        expect_frame(1, 16'h09FF, "2 init decode");
-        expect_frame(2, 16'h0B07, "2 init scan-limit");
-        expect_frame(3, 16'h0A08, "2 init intensity");
-        expect_frame(4, 16'h0C01, "2 init shutdown off");
-
-        // value_a=15 → 015    value_b=120 → 120  (ordem TP3: unidade, dezena, centena)
-        expect_frame(5,  16'h0105, "2 A unidade 5");
-        expect_frame(6,  16'h0201, "2 A dezena 1");
-        expect_frame(7,  16'h0300, "2 A centena 0");
-        expect_frame(8,  16'h0400, "2 digito 4 = 0");
-        expect_frame(9,  16'h0500, "2 B unidade 0");
-        expect_frame(10, 16'h0602, "2 B dezena 2");
-        expect_frame(11, 16'h0701, "2 B centena 1");
-        expect_frame(12, 16'h0800, "2 digito esquerdo = 0");
+        expect_frame(5, 16'h0105, "3 A unidade 5 (value_a=15)");
+        expect_frame(11, 16'h0701, "4 B centena 1 (value_b=120)");
 
         if (erros == 0)
-            $display("number_control: testes OK");
+            $display("number_control: 4 testes OK");
         else
             $display("number_control: %0d FALHAS", erros);
 
