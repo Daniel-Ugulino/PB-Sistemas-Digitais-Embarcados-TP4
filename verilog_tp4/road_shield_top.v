@@ -70,11 +70,11 @@ module road_shield_top #(
     wire       valid_d;
     reg        arrow_on;
 
-    wire near_e = (dist_e >= MIN_DIST_CM) && (dist_e <= cfg_dist_free);
-    wire near_c = (dist_c >= MIN_DIST_CM) && (dist_c <= cfg_dist_free);
-    wire near_d = (dist_d >= MIN_DIST_CM) && (dist_d <= cfg_dist_free);
+    wire near_e = (dist_e >= MIN_DIST_CM);
+    wire near_c = (dist_c >= MIN_DIST_CM);
+    wire near_d = (dist_d >= MIN_DIST_CM);
 
-    // Seta do assist_control apos um ciclo E-C-D com objeto na zona.
+    // Seta apos um ciclo E-C-D com leitura valida (acima do minimo do sensor).
     always @(posedge clk) begin
         if (rst)
             arrow_on <= 1'b0;
