@@ -78,7 +78,7 @@ module road_sensors #(
         .distancia_cm   (dist_e),
         .vel_atual      (vel_atual),
         .dist_atual     (dist_atual_e),
-        .velocidade     (vel_e)
+        .vel_obstaculo  (vel_e)
     );
 
     measure_speed #(.CLK_HZ(CLK_HZ)) vel_mod_c (
@@ -88,7 +88,7 @@ module road_sensors #(
         .distancia_cm   (dist_c),
         .vel_atual      (vel_atual),
         .dist_atual     (dist_atual_c),
-        .velocidade     (vel_c)
+        .vel_obstaculo  (vel_c)
     );
 
     measure_speed #(.CLK_HZ(CLK_HZ)) vel_mod_d (
@@ -98,7 +98,7 @@ module road_sensors #(
         .distancia_cm   (dist_d),
         .vel_atual      (vel_atual),
         .dist_atual     (dist_atual_d),
-        .velocidade     (vel_d)
+        .vel_obstaculo  (vel_d)
     );
 
 endmodule
